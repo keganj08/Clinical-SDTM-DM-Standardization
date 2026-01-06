@@ -1,9 +1,7 @@
 # Clinical SDTM Standardization - Demographics Domain
 
 ## Project Overview
-This program takes a set of mock raw clinical trial data and transforms it into a standardized Demographics domain dataset according to the SDTM using SAS.
-
-All variables that are REQUIRED and EXPECTED by the SDTM for the DM domain are accounted for.
+This program takes a set of mock raw clinical trial data and transforms it into an SDTM-compliant Demographics domain dataset using SAS.
 
 ## Project Structure
 1. 01_Specs: Contains the data's mapping spec
@@ -26,4 +24,5 @@ All variables that are REQUIRED and EXPECTED by the SDTM for the DM domain are a
 - Standardizes treatment arm and gender variables
 
 ## Author
+
 Kegan Johnson
