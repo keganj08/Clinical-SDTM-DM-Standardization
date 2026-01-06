@@ -1,0 +1,288 @@
+NOTE: PROCEDURE PRINTTO used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              286.37k
+      OS Memory           19872.00k
+      Timestamp           01/06/2026 06:01:05 AM
+      Step Count                        24  Switch Count  0
+      Page Faults                       0
+      Page Reclaims                     26
+      Page Swaps                        0
+      Voluntary Context Switches        8
+      Involuntary Context Switches      0
+      Block Input Operations            0
+      Block Output Operations           0
+      
+
+95         
+2                                                          The SAS System                      Tuesday, January  6, 2026 12:01:05 AM
+
+96         /* CREATE SORTED HELPER DATASETS */
+97         proc sort data=raw.raw_dm out=work.dm_sorted;
+98         	by SUBJID; /* Sort by subjects to match ex_sorted */
+99         run;
+
+NOTE: There were 4 observations read from the data set RAW.RAW_DM.
+NOTE: The data set WORK.DM_SORTED has 4 observations and 3 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              1073.12k
+      OS Memory           20652.00k
+      Timestamp           01/06/2026 06:01:05 AM
+      Step Count                        25  Switch Count  2
+      Page Faults                       0
+      Page Reclaims                     199
+      Page Swaps                        0
+      Voluntary Context Switches        17
+      Involuntary Context Switches      0
+      Block Input Operations            0
+      Block Output Operations           272
+      
+
+100        
+101        proc sort data=raw.raw_ex out=ex_sorted;
+102        	by SUBJID exstdtc; /* Sort by subjects, then ascending: Earliest date first */
+103        run;
+
+NOTE: There were 5 observations read from the data set RAW.RAW_EX.
+NOTE: The data set WORK.EX_SORTED has 5 observations and 3 variables.
+NOTE: PROCEDURE SORT used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              1044.62k
+      OS Memory           20652.00k
+      Timestamp           01/06/2026 06:01:05 AM
+      Step Count                        26  Switch Count  2
+      Page Faults                       0
+      Page Reclaims                     147
+      Page Swaps                        0
+      Voluntary Context Switches        18
+      Involuntary Context Switches      0
+      Block Input Operations            0
+      Block Output Operations           272
+      
+
+104        
+105        /* Get earliest date */
+106        data ex_first;
+107        	set ex_sorted;
+108        	by SUBJID;
+109        	if first.SUBJID; /* Select only the observation with the earliest date for this subject */
+110        	keep SUBJID exstdtc trt;
+111        run;
+
+NOTE: There were 5 observations read from the data set WORK.EX_SORTED.
+3                                                          The SAS System                      Tuesday, January  6, 2026 12:01:05 AM
+
+NOTE: The data set WORK.EX_FIRST has 4 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              867.25k
+      OS Memory           20392.00k
+      Timestamp           01/06/2026 06:01:05 AM
+      Step Count                        27  Switch Count  2
+      Page Faults                       0
+      Page Reclaims                     164
+      Page Swaps                        0
+      Voluntary Context Switches        10
+      Involuntary Context Switches      0
+      Block Input Operations            0
+      Block Output Operations           264
+      
+
+112        
+113        /* Get latest date */
+114        data ex_last;
+115        	set ex_sorted;
+116        	by SUBJID;
+117        	if last.SUBJID; /* Select only the observation with the latest date for this subject */
+118        	keep SUBJID exstdtc trt;
+119        run;
+
+NOTE: There were 5 observations read from the data set WORK.EX_SORTED.
+NOTE: The data set WORK.EX_LAST has 4 observations and 3 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.00 seconds
+      user cpu time       0.00 seconds
+      system cpu time     0.00 seconds
+      memory              866.21k
+      OS Memory           20392.00k
+      Timestamp           01/06/2026 06:01:05 AM
+      Step Count                        28  Switch Count  2
+      Page Faults                       0
+      Page Reclaims                     121
+      Page Swaps                        0
+      Voluntary Context Switches        10
+      Involuntary Context Switches      0
+      Block Input Operations            0
+      Block Output Operations           264
+      
+
+120        
+121        /* MAIN ENGINE */
+122        data sdtm.dm;
+123        	
+124        	/* SET UP ATTRIBUTES ACCORDING TO THE SDTM */
+125        	length
+126        		/* Identifiers */
+127        	    STUDYID  $8		/* Lenghts set to lengths of longest data values */
+128        	    DOMAIN   $2
+129        	    USUBJID  $40
+130        	    SUBJID   $10
+131        	    SITEID   $3
+4                                                          The SAS System                      Tuesday, January  6, 2026 12:01:05 AM
+
+132        	
+133        	    /* Timing */
+134        	    RFSTDTC  $19	/* Numeric */
+135        	    RFENDTC  $19
+136        	    RFXSTDTC $19
+137        	    RFXENDTC $19
+138        	    RFICDTC  $19
+139        	    RFPENDTC $19
+140        	    DTHDTC   $19
+141        	    DTHFL    $1
+142        	    BRTHDTC  $19
+143        	
+144        	    /* Demographics */
+145        	    AGE		  8    	/* Numeric */
+146        	    AGEU     $10
+147        	    SEX      $1
+148        	    RACE     $60
+149        	
+150        	    /* Treatment / Arms */
+151        	    ARMCD    $20
+152        	    ARM      $60
+153        	    ACTARMCD $20
+154        	    ACTARM   $60
+155        	    ARMNRS   $20
+156        	    ACTARMUD $20
+157        	    COUNTRY  $3;
+158        	
+159        	/* Merge raw_dm and raw_es */
+160        	merge work.dm_sorted (in=a)
+161        		work.ex_first (in=b rename=(exstdtc = raw_start trt=trt_first))
+162        		work.ex_last  (in=c rename=(exstdtc = raw_end trt=trt_last)); /* Perform two merges in succession, keeping date and
+162      ! treatment from both ex_first and ex_last */
+163        	by SUBJID;
+164        	if a; /* Keep a */
+165        	
+166        	/* Logic */
+167        	STUDYID = "DEMO-001";
+168        	DOMAIN = "DM";
+169        	SITEID = "001";
+170        	USUBJID = CATX("-", STUDYID, SITEID, SUBJID); /* CATX is ideal for concatenation within one observation */
+171        	
+172        	/* Timing logic */
+173        	%dt_to_iso(raw_start, 	RFSTDTC);
+174        	%dt_to_iso(raw_end, 	RFENDTC);
+175        	%dt_to_iso(raw_start, 	RFXSTDTC);
+176        	%dt_to_iso(raw_end, 	RFXENDTC);
+177        	%dt_to_iso(brthdt, 		BRTHDTC);
+178        	
+179        	/* Variables that are expected but not available; Recorded as missing */
+180        	RFICDTC = "";
+181        	RFPENDTC = "";
+182        	DTHDTC = "";
+183        	DTHFL = "";
+184        	RACE = "UNKNOWN";
+185        
+186        	if not missing(brthdt) and not missing(raw_start) then do;
+187        		_dt1 = input(brthdt, anydtdte32.);
+188        		_dt2 = input(raw_start, anydtdte32.);
+5                                                          The SAS System                      Tuesday, January  6, 2026 12:01:05 AM
+
+189        		AGE = floor(yrdif(_dt1, _dt2, 'AGE')); /* Calculate time between subject birth and reference start. More robust for age
+189      !  than intick() */
+190        		if AGE < 0 or AGE > 125 then put "WARNING: Suspect AGE calculated: " AGE= USUBJID=;
+191        		AGEU = "YEARS";
+192        	end;
+193        	
+194        	_temp_sex = upcase(strip(gender));
+195        	select (_temp_sex);
+196        		when("M", "MALE") do;
+197        			SEX = "M";
+198        		end;
+199        		when ("F", "FEMALE") do;
+200        			SEX = "F";
+201        		end;
+202        		otherwise do;
+203        			SEX = "U";
+204        		end;
+205        	end;
+206        
+207        	_temp_arm = upcase(strip(trt_first));
+208        	select (_temp_arm);
+209        		when("PLACEBO") do;
+210        			ARMCD 	= "PLACEBO";
+211        			ARM 	= "Placebo";
+212        			ARMNRS 	= "";
+213        		end;
+214        		when ("DRUG_A") do;
+215        			ARMCD 	= "TRTA";
+216        			ARM 	= "Drug A";
+217        			ARMNRS 	= "";
+218        		end;
+219        		when ("DRUG_B") do;
+220        			ARMCD 	= "TRTB";
+221        			ARM 	= "Drug B";
+222        			ARMNRS 	= "";
+223        		end;
+224        		when ("") do;
+225        			ARMCD 	= "";
+226        			ARM 	= "";
+227        			ARMNRS	= "NOT ASSIGNED";
+228        		end;
+229        		otherwise do;
+230        			ARMCD 	= "";
+231        			ARM 	= "";
+232        			ARMNRS	= "NOT ASSIGNED";
+233        			put "WARNING: Unexpected treatment found: " _temp_arm= " for " USUBJID=;
+234        		end;
+235        	end;
+236        	
+237        	ACTARMCD 	= ARMCD; /* This is true in this data set with only one treatment variable */
+238        	ACTARM		= ARM;
+239        	ACTARMUD	= "";
+240        	
+241        	COUNTRY = "USA";
+242        
+243        	drop _temp_date _dt1 _dt2 _temp_arm _temp_sex;
+244        
+245        	keep STUDYID DOMAIN USUBJID SUBJID RFSTDTC RFENDTC RFXSTDTC RFXENDTC RFICDTC RFPENDTC DTHDTC DTHFL
+6                                                          The SAS System                      Tuesday, January  6, 2026 12:01:05 AM
+
+246        			SITEID BRTHDTC AGE AGEU SEX RACE ARMCD ARM ACTARMCD ACTARM ARMNRS ACTARMUD COUNTRY;
+247        run;
+
+NOTE: There were 4 observations read from the data set WORK.DM_SORTED.
+NOTE: There were 4 observations read from the data set WORK.EX_FIRST.
+NOTE: There were 4 observations read from the data set WORK.EX_LAST.
+NOTE: The data set SDTM.DM has 4 observations and 25 variables.
+NOTE: DATA statement used (Total process time):
+      real time           0.01 seconds
+      user cpu time       0.01 seconds
+      system cpu time     0.00 seconds
+      memory              1759.50k
+      OS Memory           21168.00k
+      Timestamp           01/06/2026 06:01:05 AM
+      Step Count                        29  Switch Count  3
+      Page Faults                       1
+      Page Reclaims                     361
+      Page Swaps                        0
+      Voluntary Context Switches        48
+      Involuntary Context Switches      2
+      Block Input Operations            16
+      Block Output Operations           280
+      
+
+248        
+249        proc printto;
+250        run;
+
