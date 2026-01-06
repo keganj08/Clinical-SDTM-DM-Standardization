@@ -1,5 +1,5 @@
 /******************************************************************************
-* Program: dm_program.sas
+* Program: sdtm_dm.sas
 * Purpose: Create SDTM Demographics (DM) domain from mock raw clinical trial data
 * 
 * Description:
